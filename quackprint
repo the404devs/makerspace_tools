@@ -1,0 +1,93 @@
+#!/bin/bash
+
+YEL="\e[0;33m"
+CYAN="\e[0;36m"
+BOLDYEL="\e[1;33m"
+ITALCYAN="\e[3;36m"
+BASE="\e[0m"
+BOLDCYAN="\e[1;36m"
+BOLDGREEN="\e[1;32m"
+GREEN="\e[0;32m"
+BOLDRED="\e[1;31m"
+RED="\e[0;31m"
+
+display_menu() {
+    UPTIME=$(uptime -p)
+
+    clear
+    echo -e "${BOLDYEL}QuackPrint ${CYAN}($(hostname -I | xargs))${BASE}"
+    echo -e "${ITALCYAN}WSPL Makerspace 3D Print Server${BASE}"
+    echo -e "${ITALCYAN}08/03/2023 - Owen Goodwin${BASE}"
+    echo 
+    echo -e "${ITALCYAN}Uptime: ${UPTIME:3}${BASE}"
+    echo -e "${YEL}========= ${BOLDYEL}Select an option:${YEL} =========${BASE}"
+    echo -e "${BOLDCYAN}1.${BASE} System Info"
+    echo -e "${BOLDCYAN}2.${BASE} List Devices"
+    echo -e "${BOLDCYAN}3.${BASE} Open RasPi Config Menu"
+    echo -e "${BOLDCYAN}4.${BASE} Shutdown"
+    echo -e "${BOLDCYAN}5.${BASE} Reboot"
+    echo -e "${BOLDCYAN}6.${BASE} Exit to Command Line"
+    echo -e "${BOLDCYAN}7.${BASE} Disconnect from QuackPrint server"
+    echo -e "${YEL}=====================================${BASE}"
+    echo "Enter your choice (1-7):"
+}
+
+get_user_choice() {
+    read -n 1 -p "> " choice
+    while [[ ! $choice =~ ^[1-7]$ ]]; do
+        echo
+        echo "Invalid choice. Please enter a valid option (1-7):"
+        read -n 1 -p "> " choice
+    done
+}
+
+handle_choice() {
+    clear
+    case $1 in
+        1) TEMP=$(vcgencmd measure_temp)
+           echo "CPU temperature : ${TEMP:5}"
+           echo
+           cat /proc/cpuinfo
+           echo -e "${GREEN}"
+           read -n 1 -p "Press any key to return..."
+           ;;
+        2) clear
+           arp -a
+           echo
+           echo -e "${GREEN}"
+           read -n 1 -p "Press any key to return..."
+           ;;
+        3) clear
+           sudo raspi-config
+           ;;
+        5) echo -e "${BOLDRED}Rebooting the system..."
+           echo -e "${CYAN}This will disconnect you. Reconnect manually in a few minutes."
+           echo -e "${BASE}"
+           sudo reboot
+           read -n 1
+           ;;
+        4) echo -e "${BOLDRED}Shutting down the system..."
+           echo -e "${CYAN}You will need to turn it back on yourself."
+           echo -e "${BASE}"
+           sudo shutdown now
+           read -n 1
+           ;;
+        6) echo -e "${BOLDGREEN}Exiting...${BASE}"
+           echo -e "${CYAN}You may access this menu at any time with the commands '${BOLDYEL}qp${CYAN}' or '${BOLDYEL>
+           echo
+           exit 0
+           ;;
+        7) echo -e "${BOLDRED}Disconnecting..."
+           echo -e "${YEL}Thank you for quacking with us today."
+           echo -e "${BASE}"
+           pkill -9 -t pts/0
+           read -n 1
+           ;;
+    esac
+}
+
+while true; do
+    display_menu
+    get_user_choice
+    handle_choice $choice
+done
