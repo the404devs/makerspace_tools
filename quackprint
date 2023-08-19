@@ -13,13 +13,14 @@ RED="\e[0;31m"
 
 display_menu() {
     UPTIME=$(uptime -p)
-
+    BOOTTIME=$(systemd-analyze | awk '/Startup finished in/ { print $10 }')
     clear
     echo -e "${BOLDYEL}QuackPrint ${CYAN}($(hostname -I | xargs))${BASE}"
     echo -e "${ITALCYAN}WSPL Makerspace 3D Print Server${BASE}"
     echo -e "${ITALCYAN}08/03/2023 - Owen Goodwin${BASE}"
-    echo 
+    echo
     echo -e "${ITALCYAN}Uptime: ${UPTIME:3}${BASE}"
+    echo -e "${ITALCYAN}Last boot took: ${BOOTTIME}${BASE}"
     echo -e "${YEL}========= ${BOLDYEL}Select an option:${YEL} =========${BASE}"
     echo -e "${BOLDCYAN}1.${BASE} System Info"
     echo -e "${BOLDCYAN}2.${BASE} List Devices"
@@ -28,15 +29,16 @@ display_menu() {
     echo -e "${BOLDCYAN}5.${BASE} Reboot"
     echo -e "${BOLDCYAN}6.${BASE} Exit to Command Line"
     echo -e "${BOLDCYAN}7.${BASE} Disconnect from QuackPrint server"
+    echo -e "${BOLDCYAN}8.${BASE} Wi-Fi Network Jump ${RED}(danger)"
     echo -e "${YEL}=====================================${BASE}"
-    echo "Enter your choice (1-7):"
+    echo "Enter your choice (1-8):"
 }
 
 get_user_choice() {
     read -n 1 -p "> " choice
-    while [[ ! $choice =~ ^[1-7]$ ]]; do
+    while [[ ! $choice =~ ^[1-8]$ ]]; do
         echo
-        echo "Invalid choice. Please enter a valid option (1-7):"
+        echo -e  "\e[2A\e[KInvalid choice. Please enter a valid option (1-8):"
         read -n 1 -p "> " choice
     done
 }
@@ -52,7 +54,7 @@ handle_choice() {
            read -n 1 -p "Press any key to return..."
            ;;
         2) clear
-           arp -a
+           arp -a | awk '{printf "%-15s (%-17s) at %s\n", $1, $4, $2}'
            echo
            echo -e "${GREEN}"
            read -n 1 -p "Press any key to return..."
@@ -60,7 +62,7 @@ handle_choice() {
         3) clear
            sudo raspi-config
            ;;
-        5) echo -e "${BOLDRED}Rebooting the system..."
+                   5) echo -e "${BOLDRED}Rebooting the system..."
            echo -e "${CYAN}This will disconnect you. Reconnect manually in a few minutes."
            echo -e "${BASE}"
            sudo reboot
@@ -73,16 +75,49 @@ handle_choice() {
            read -n 1
            ;;
         6) echo -e "${BOLDGREEN}Exiting...${BASE}"
-           echo -e "${CYAN}You may access this menu at any time with the commands '${BOLDYEL}qp${CYAN}' or '${BOLDYEL>
+           echo -e "${CYAN}You may access this menu at any time with the commands '${BOLDYEL}qp${CYAN}' or '${BOLDYEL}quackprint${CYAN}'"
            echo
            exit 0
            ;;
         7) echo -e "${BOLDRED}Disconnecting..."
            echo -e "${YEL}Thank you for quacking with us today."
            echo -e "${BASE}"
-           pkill -9 -t pts/0
+           TTY=$(tty)
+           pkill -9 -t ${TTY:5}
            read -n 1
            ;;
+        8) echo -e "${BOLDRED}YOU ARE ABOUT TO DO SOMETHING RISKY, PLEASE READ THIS FIRST:"
+           echo
+           echo -e "${RED}This action cause the QuackPrint server to disable it's hotspot and attempt to connect to a different WiFi network."
+           echo
+           echo -e "${RED}Please ensure you have another device handy that can connect to the new network, allowing you to reconnect."
+           echo
+           echo -e "${RED}You will need to SSH manually, the connection script will not work. Please ensure you have a way of identifying QuackPrint's IP address."
+           echo
+           echo -e "${RED}You have one chance to pull this off. If you mess up, you will need to pull the plug on the QuackPrint to restart it."
+           echo
+           echo
+           echo -e "${BOLDRED}THIS IS YOUR FINAL WARNING. DO NOT PROCEED UNLESS YOU KNOW WHAT YOU ARE DOING.${CYAN}"
+           echo
+           read -n 1 -p "Do you wish to continue? (Y/N)" x
+           case $x in
+                 [yY]) clear
+                       echo -e "Please enter the SSID (name) of the WiFi network:"
+                       read -p "> " SSID
+                       echo
+                       echo -e "Please enter the password for ${SSID}:"
+                       read -p "> " PASS
+                       echo
+                       echo -e "${GREEN}Attempting to connect now..."
+                       echo -e "${YEL}QuackPrint should connect to the network in the next 10 seconds."
+                       echo -e "${BOLDRED}Good luck. I will see you on the other side."
+                       echo
+                       echo -e "${RED}If you have messed up, pull the power cord to reboot the server and try again."
+                       sudo nmcli device disconnect wlan0 && sleep 10 && sudo nmcli device wifi connect $SSID password $PASS
+                       ;;
+                 [nN]) echo
+                       ;;
+           esac
     esac
 }
 
